@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Feedback Insights - Document Classifier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-white shadow-lg mb-6">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-4">
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl">🔒</span>
+                    <span class="text-xl font-bold text-gray-800">Document Classifier</span>
+                </div>
+                <div class="flex space-x-1">
+                    <a href="index.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">
+                        📤 Upload
+                    </a>
+                    <a href="review.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">
+                        🔍 Review Queue
+                    </a>
+                    <a href="audit.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">
+                        📋 Audit Trail
+                    </a>
+                    <a href="insights.html" class="px-4 py-2 bg-blue-100 rounded-lg text-gray-700">
+                        🧠 Insights</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">🧠 AI Learning Insights</h1>
+            <p class="text-gray-600">How the system is learning from your feedback</p>
+        </div>
+
+        <!-- Accuracy by Category -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">📊 Accuracy by Category</h2>
+            <div id="accuracyDisplay" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Common Corrections -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">🔄 Common Corrections</h2>
+            <div id="correctionsDisplay"></div>
+        </div>
+
+        <!-- Learned Patterns -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">📚 Learned Patterns (Active in Prompts)</h2>
+            <div id="patternsDisplay"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+
+        async function loadInsights() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/feedback/insights`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayAccuracy(data.insights.accuracy_by_class);
+                    displayCorrections(data.insights.common_corrections);
+                    displayLearnedPatterns(data.learned_patterns);
+                }
+            } catch (error) {
+                console.error('Error loading insights:', error);
+            }
+        }
+
+        function displayAccuracy(accuracy) {
+            const container = document.getElementById('accuracyDisplay');
+            
+            const html = Object.entries(accuracy).map(([category, stats]) => {
+                const color = stats.accuracy >= 80 ? 'green' : stats.accuracy >= 60 ? 'orange' : 'red';
+                return `
+                    <div class="bg-${color}-50 border border-${color}-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-${color}-900">${category}</h3>
+                        <p class="text-3xl font-bold text-${color}-600">${stats.accuracy.toFixed(1)}%</p>
+                        <p class="text-sm text-gray-600">${stats.agreements}/${stats.total} correct</p>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html || '<p class="text-gray-500">No data yet</p>';
+        }
+
+        function displayCorrections(corrections) {
+            const container = document.getElementById('correctionsDisplay');
+            
+            if (!corrections || corrections.length === 0) {
+                container.innerHTML = '<p class="text-green-600">✓ No common errors detected!</p>';
+                return;
+            }
+
+            const html = corrections.map(corr => `
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-yellow-900">
+                            ${corr.from} → ${corr.to}
+                        </span>
+                        <span class="bg-yellow-200 px-2 py-1 rounded text-sm">
+                            ${corr.count} times
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-700">Examples:</p>
+                    <ul class="text-xs text-gray-600 list-disc list-inside">
+                        ${corr.examples.map(ex => `<li>${ex}</li>`).join('')}
+                    </ul>
+                    <p class="text-xs text-green-700 mt-2">
+                        ✓ This pattern is now actively being used to improve future classifications
+                    </p>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        function displayLearnedPatterns(patterns) {
+            const container = document.getElementById('patternsDisplay');
+            
+            if (!patterns || patterns.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No patterns learned yet. Submit more feedback!</p>';
+                return;
+            }
+
+            const html = patterns.slice(0, 10).map(pattern => `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="font-semibold text-blue-900">
+                                ${pattern.from_classification} → ${pattern.to_classification}
+                            </span>
+                            <p class="text-sm text-gray-600 mt-1">${pattern.context}</p>
+                            <p class="text-xs text-gray-500 mt-2">
+                                Last seen: ${new Date(pattern.last_seen).toLocaleString()}
+                            </p>
+                        </div>
+                        <div class="text-center">
+                            <div class="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold">
+                                ${pattern.frequency}
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">occurrences</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        loadInsights();
+        
+        // Refresh every 30 seconds
+        setInterval(loadInsights, 30000);
+    </script>
+</body>
+</html>

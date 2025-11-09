@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Queue - Document Classifier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        .nav-link.active {
+            background-color: rgba(59, 130, 246, 0.2);
+            font-weight: 600;
+        }
+        .review-card {
+            transition: all 0.3s ease;
+        }
+        .review-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation Header -->
+    <nav class="bg-white shadow-lg mb-6">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-4">
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl">🔒</span>
+                    <span class="text-xl font-bold text-gray-800">Document Classifier</span>
+                </div>
+                <div class="flex space-x-1">
+                    <a href="index.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">
+                        📤 Upload
+                    </a>
+                    <a href="review.html" class="nav-link active px-4 py-2 rounded-lg text-gray-700">
+                        🔍 Review Queue
+                    </a>
+                    <a href="audit.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">
+                        📋 Audit Trail
+                    </a>
+                    <a href="insights.html" class="px-4 py-2 rounded-lg text-gray-700">
+                        🧠 Insights</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                🔍 Human-in-the-Loop Review Queue
+            </h1>
+            <p class="text-gray-600">
+                Review and validate AI classifications to improve system accuracy
+            </p>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Classification</label>
+                    <select id="filterClassification" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Classifications</option>
+                        <option value="Highly Sensitive">Highly Sensitive</option>
+                        <option value="Confidential">Confidential</option>
+                        <option value="Public">Public</option>
+                        <option value="Unsafe">Unsafe</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Safety</label>
+                    <select id="filterSafety" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Safety Levels</option>
+                        <option value="safe">Safe</option>
+                        <option value="unsafe">Unsafe</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Prompt Type</label>
+                    <select id="filterPrompt" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Prompt Types</option>
+                        <option value="PII-Focused">PII-Focused</option>
+                        <option value="Confidential">Confidential</option>
+                        <option value="Technical">Technical</option>
+                        <option value="Public">Public</option>
+                        <option value="Safety-Aware">Safety-Aware</option>
+                        <option value="Standard">Standard</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Show Reviewed</label>
+                    <select id="filterReviewed" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="pending">Pending Only</option>
+                        <option value="all">All Items</option>
+                        <option value="reviewed">Reviewed Only</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div id="reviewStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <!-- Stats populated by JS -->
+        </div>
+
+        <!-- Review Queue -->
+        <div id="reviewQueue" class="space-y-4">
+            <div class="text-center py-8 text-gray-500">
+                Loading review queue...
+            </div>
+        </div>
+    </div>
+
+    <!-- Correction Modal -->
+    <div id="correctionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Correct Classification</h2>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Document Name</label>
+                    <p id="modalDocName" class="text-gray-900 font-semibold"></p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Current Classification</label>
+                    <p id="modalCurrentClass" class="text-gray-900"></p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Correct Classification</label>
+                    <select id="correctedClassification" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="Highly Sensitive">Highly Sensitive</option>
+                        <option value="Confidential">Confidential</option>
+                        <option value="Public">Public</option>
+                        <option value="Unsafe">Unsafe</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reviewer Comments</label>
+                    <textarea 
+                        id="reviewerComments" 
+                        rows="4" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Explain why the classification was incorrect..."
+                    ></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                    <input 
+                        type="text" 
+                        id="reviewerName" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="SME Name"
+                        value="SME Reviewer"
+                    >
+                </div>
+
+                <div class="flex gap-4">
+                    <button onclick="submitCorrection()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Submit Correction
+                    </button>
+                    <button onclick="closeModal()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let allItems = [];
+        let reviewedItems = new Set();
+        let currentReviewItem = null;
+
+        // Load review queue - UPDATED
+        async function loadReviewQueue() {
+            try {
+                // Use new endpoint that only returns unreviewed documents
+                const response = await fetch(`${API_BASE_URL}/api/review/unreviewed?limit=100`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    allItems = data.data;
+                    applyFilters();
+                    updateStats();
+                }
+            } catch (error) {
+                console.error('Error loading review queue:', error);
+                document.getElementById('reviewQueue').innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                        <p class="text-red-800">Error loading review queue. Please ensure the backend is running.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Updated submit feedback - force reload after submission
+        async function submitFeedback(feedback, docId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(feedback)
+                });
+
+                if (response.ok) {
+                    showSuccessMessage('✓ Feedback submitted successfully!');
+                    
+                    // Remove the reviewed item from the list immediately
+                    allItems = allItems.filter(item => item.id !== docId);
+                    
+                    // Reload the queue to get fresh unreviewed items
+                    await loadReviewQueue();
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                alert('Error submitting feedback. Please try again.');
+            }
+        }
+
+        // Get safety status
+        function getSafetyStatus(details) {
+            if (!details) return true;
+            const sa = details.safety_assessment;
+            if (!sa) return true;
+            return sa.is_safe !== false && sa.child_safe !== false;
+        }
+
+        // Get prompt type
+        function getPromptType(details) {
+            if (!details) return 'Standard';
+            const reasoning = (details.detailed_reasoning || details.reasoning || '').toLowerCase();
+            
+            if (reasoning.includes('pii') || reasoning.includes('social security')) return 'PII-Focused';
+            if (reasoning.includes('internal') || reasoning.includes('confidential')) return 'Confidential';
+            if (reasoning.includes('technical') || reasoning.includes('proprietary')) return 'Technical';
+            if (reasoning.includes('marketing') || reasoning.includes('public')) return 'Public';
+            if (reasoning.includes('military') || reasoning.includes('defense')) return 'Safety-Aware';
+            
+            return 'Standard';
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const classFilter = document.getElementById('filterClassification').value;
+            const safetyFilter = document.getElementById('filterSafety').value;
+            const promptFilter = document.getElementById('filterPrompt').value;
+            const reviewedFilter = document.getElementById('filterReviewed').value;
+
+            let filtered = allItems.filter(item => {
+                const matchesClass = !classFilter || item.classification === classFilter;
+                
+                const details = parseDetails(item.details);
+                const isSafe = getSafetyStatus(details);
+                const matchesSafety = !safetyFilter || 
+                    (safetyFilter === 'safe' && isSafe) || 
+                    (safetyFilter === 'unsafe' && !isSafe);
+
+                const promptType = getPromptType(details);
+                const matchesPrompt = !promptFilter || promptType === promptFilter;
+
+                const isReviewed = reviewedItems.has(item.id);
+                const matchesReviewed = 
+                    reviewedFilter === 'all' || 
+                    (reviewedFilter === 'pending' && !isReviewed) ||
+                    (reviewedFilter === 'reviewed' && isReviewed);
+
+                return matchesClass && matchesSafety && matchesPrompt && matchesReviewed;
+            });
+
+            renderReviewQueue(filtered);
+        }
+
+        // Parse details
+        function parseDetails(detailsStr) {
+            try {
+                if (typeof detailsStr === 'string') return JSON.parse(detailsStr);
+                return detailsStr;
+            } catch {
+                return null;
+            }
+        }
+
+        // Render review queue
+        function renderReviewQueue(items) {
+            const container = document.getElementById('reviewQueue');
+            
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
+                        <div class="text-6xl mb-4">✅</div>
+                        <p class="text-green-800 text-lg font-semibold">All caught up!</p>
+                        <p class="text-green-600 mt-2">No documents pending review with current filters.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = items.map(item => createReviewCard(item)).join('');
+        }
+
+        // Create review card
+        function createReviewCard(item) {
+            const isReviewed = reviewedItems.has(item.id);
+            const details = parseDetails(item.details);
+            const isSafe = getSafetyStatus(details);
+            const promptType = getPromptType(details);
+            
+            const categoryColors = {
+                'Highly Sensitive': 'bg-red-100 text-red-800 border-red-300',
+                'Confidential': 'bg-orange-100 text-orange-800 border-orange-300',
+                'Public': 'bg-green-100 text-green-800 border-green-300',
+                'Unsafe': 'bg-purple-100 text-purple-800 border-purple-300'
+            };
+
+            const colorClass = categoryColors[item.classification] || 'bg-gray-100 text-gray-800';
+
+            return `
+                <div class="review-card bg-white rounded-lg shadow-md p-6 ${isReviewed ? 'opacity-60 border-2 border-green-200' : ''}">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-gray-800">${item.document_name}</h3>
+                            <p class="text-sm text-gray-500">${formatDateTime(item.timestamp)}</p>
+                        </div>
+                        <div class="flex flex-col items-end gap-2">
+                            <span class="px-3 py-1 rounded-full text-sm font-semibold ${colorClass}">
+                                ${item.classification}
+                            </span>
+                            ${isSafe ? 
+                                '<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-semibold">✓ Safe</span>' : 
+                                '<span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-semibold">⚠ Unsafe</span>'
+                            }
+                            <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">${promptType}</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-gray-50 p-3 rounded">
+                            <p class="text-xs text-gray-600">Confidence</p>
+                            <p class="text-xl font-bold text-blue-600">
+                                ${item.confidence ? (item.confidence * 100).toFixed(1) + '%' : 'N/A'}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded">
+                            <p class="text-xs text-gray-600">Status</p>
+                            <p class="text-xl font-bold ${isReviewed ? 'text-green-600' : 'text-orange-600'}">
+                                ${isReviewed ? '✓ Reviewed' : '⏳ Pending'}
+                            </p>
+                        </div>
+                    </div>
+
+                    ${details ? `
+                        <details class="mb-4">
+                            <summary class="cursor-pointer text-sm font-semibold text-blue-600 hover:text-blue-800 mb-2">
+                                📄 View Classification Details
+                            </summary>
+                            <div class="bg-gray-50 p-4 rounded-lg mt-2 space-y-3 text-sm">
+                                ${details.reasoning || details.detailed_reasoning ? `
+                                    <div>
+                                        <p class="text-xs font-semibold text-gray-700 mb-1">Reasoning:</p>
+                                        <p class="text-gray-600">${details.reasoning || details.detailed_reasoning}</p>
+                                    </div>
+                                ` : ''}
+                                
+                                ${details.evidence && details.evidence.length > 0 ? `
+                                    <div>
+                                        <p class="text-xs font-semibold text-gray-700 mb-1">Evidence:</p>
+                                        <div class="space-y-1">
+                                            ${details.evidence.map(ev => `
+                                                <div class="border-l-2 border-blue-500 pl-2 text-gray-600">
+                                                    Page ${ev.page}: ${ev.finding}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${details.pii_detected && Object.values(details.pii_detected).some(v => v === true) ? `
+                                    <div>
+                                        <p class="text-xs font-semibold text-red-700 mb-1">PII Detected:</p>
+                                        <div class="text-red-600">
+                                            ${Object.entries(details.pii_detected)
+                                                .filter(([k, v]) => v === true)
+                                                .map(([key]) => `• ${key.replace(/_/g, ' ').toUpperCase()}`)
+                                                .join('<br>')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${details.safety_assessment?.violations?.length > 0 ? `
+                                    <div>
+                                        <p class="text-xs font-semibold text-red-700 mb-1">Safety Violations:</p>
+                                        <div class="space-y-1">
+                                            ${details.safety_assessment.violations.map(v => `
+                                                <div class="text-red-600">
+                                                    ${v.type} (${v.severity}): ${v.description}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </details>
+                    ` : ''}
+
+                    <div class="flex gap-2">
+                        ${!isReviewed ? `
+                            <button 
+                                onclick="confirmCorrect(${item.id}, '${item.classification}')"
+                                class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                            >
+                                ✓ Confirm Correct
+                            </button>
+                            <button 
+                                onclick="openCorrectionModal(${item.id}, '${escapeHtml(item.document_name)}', '${item.classification}')"
+                                class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                            >
+                                ✗ Mark Incorrect
+                            </button>
+                        ` : `
+                            <div class="flex-1 px-4 py-2 bg-green-100 text-green-800 rounded-lg text-center font-semibold">
+                                ✓ Already Reviewed
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Confirm correct
+        async function confirmCorrect(docId, classification) {
+            const feedback = {
+                document_id: docId.toString(),
+                original_classification: classification,
+                corrected_classification: classification,
+                reviewer_name: 'SME Reviewer',
+                reviewer_comments: 'Classification confirmed as correct',
+                confidence_score: 1.0
+            };
+
+            await submitFeedback(feedback, docId);
+        }
+
+        // Open correction modal
+        function openCorrectionModal(docId, docName, currentClass) {
+            currentReviewItem = { id: docId, name: docName, classification: currentClass };
+            
+            document.getElementById('modalDocName').textContent = docName;
+            document.getElementById('modalCurrentClass').textContent = currentClass;
+            document.getElementById('correctedClassification').value = currentClass;
+            document.getElementById('reviewerComments').value = '';
+            
+            document.getElementById('correctionModal').classList.remove('hidden');
+        }
+
+        // Submit correction
+        async function submitCorrection() {
+            if (!currentReviewItem) return;
+
+            const correctedClass = document.getElementById('correctedClassification').value;
+            const comments = document.getElementById('reviewerComments').value;
+            const reviewerName = document.getElementById('reviewerName').value;
+
+            if (!comments.trim()) {
+                alert('Please provide comments explaining the correction');
+                return;
+            }
+
+            const feedback = {
+                document_id: currentReviewItem.id.toString(),
+                original_classification: currentReviewItem.classification,
+                corrected_classification: correctedClass,
+                reviewer_name: reviewerName,
+                reviewer_comments: comments,
+                confidence_score: 0.8
+            };
+
+            await submitFeedback(feedback, currentReviewItem.id);
+            closeModal();
+        }
+
+        // Submit feedback
+        async function submitFeedback(feedback, docId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(feedback)
+                });
+
+                if (response.ok) {
+                    reviewedItems.add(docId);
+                    applyFilters();
+                    updateStats();
+                    
+                    showSuccessMessage('✓ Feedback submitted successfully!');
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                alert('Error submitting feedback. Please try again.');
+            }
+        }
+
+        // Show success message
+        function showSuccessMessage(message) {
+            const msg = document.createElement('div');
+            msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+            msg.textContent = message;
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 3000);
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('correctionModal').classList.add('hidden');
+            currentReviewItem = null;
+        }
+
+        // Update statistics
+        function updateStats() {
+            const total = allItems.length;
+            const reviewed = reviewedItems.size;
+            const pending = total - reviewed;
+
+            document.getElementById('reviewStats').innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-600">Total Items</p>
+                    <p class="text-3xl font-bold text-blue-600">${total}</p>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-600">Pending Review</p>
+                    <p class="text-3xl font-bold text-orange-600">${pending}</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-600">Reviewed</p>
+                    <p class="text-3xl font-bold text-green-600">${reviewed}</p>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-600">Completion</p>
+                    <p class="text-3xl font-bold text-purple-600">${total > 0 ? Math.round((reviewed / total) * 100) : 0}%</p>
+                </div>
+            `;
+        }
+
+        // Utility functions
+        function formatDateTime(timestamp) {
+            if (!timestamp) return 'N/A';
+            return new Date(timestamp).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        document.getElementById('filterClassification').addEventListener('change', applyFilters);
+        document.getElementById('filterSafety').addEventListener('change', applyFilters);
+        document.getElementById('filterPrompt').addEventListener('change', applyFilters);
+        document.getElementById('filterReviewed').addEventListener('change', applyFilters);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        document.getElementById('correctionModal').addEventListener('click', (e) => {
+            if (e.target.id === 'correctionModal') closeModal();
+        });
+
+        // Initial load
+        loadReviewQueue();
+    </script>
+</body>
+</html>

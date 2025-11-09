@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Analytics - Document Classifier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation Header -->
+    <nav class="bg-white shadow-lg mb-6">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-4">
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl">🔒</span>
+                    <span class="text-xl font-bold text-gray-800">Document Classifier</span>
+                </div>
+                <div class="flex space-x-1">
+                    <a href="index.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">
+                        📤 Upload
+                    </a>
+                    <a href="review.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">
+                        🔍 Review Queue
+                    </a>
+                    <a href="audit.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">
+                        📋 Audit Trail
+                    </a>
+                    <a href="analytics.html" class="nav-link active px-4 py-2 rounded-lg text-gray-700">
+                        📊 Analytics</a>
+                    <a href="insights.html" class="px-4 py-2 rounded-lg text-gray-700 bg-blue-100">
+                        🧠 Insights</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">📊 Feedback Learning Analytics</h1>
+            <p class="text-gray-600">AI learning insights from human feedback</p>
+        </div>
+
+        <!-- Key Metrics -->
+        <div id="keyMetrics" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"></div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Common Misclassifications</h2>
+                <canvas id="mistakesChart"></canvas>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Accuracy by Category</h2>
+                <canvas id="accuracyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">🎯 Prompt Improvement Recommendations</h2>
+            <div id="recommendations"></div>
+        </div>
+
+        <!-- Problematic Categories -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">⚠️ Categories Requiring Attention</h2>
+            <div id="problematicCategories"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+
+        async function loadAnalytics() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/feedback/analytics`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    renderKeyMetrics(data.statistics);
+                    renderCharts(data.patterns);
+                    renderRecommendations(data.adjustments);
+                    renderProblematicCategories(data.patterns.problematic_categories);
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+
+        function renderKeyMetrics(stats) {
+            const accuracy = stats.total_reviews > 0 
+                ? ((stats.confirmed_correct / stats.total_reviews) * 100).toFixed(1)
+                : 0;
+
+            document.getElementById('keyMetrics').innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-600">Total Reviews</p>
+                    <p class="text-3xl font-bold text-blue-600">${stats.total_reviews}</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-600">Confirmed Correct</p>
+                    <p class="text-3xl font-bold text-green-600">${stats.confirmed_correct}</p>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-600">Corrections Made</p>
+                    <p class="text-3xl font-bold text-red-600">${stats.corrections_made}</p>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-600">Overall Accuracy</p>
+                    <p class="text-3xl font-bold text-purple-600">${accuracy}%</p>
+                </div>
+            `;
+        }
+
+        function renderCharts(patterns) {
+            // Common mistakes chart
+            const mistakeLabels = Object.keys(patterns.common_mistakes);
+            const mistakeCounts = Object.values(patterns.common_mistakes);
+
+            new Chart(document.getElementById('mistakesChart'), {
+                type: 'bar',
+                data: {
+                    labels: mistakeLabels,
+                    datasets: [{
+                        label: 'Frequency',
+                        data: mistakeCounts,
+                        backgroundColor: '#ef4444'
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+
+            // Accuracy by category (placeholder)
+            new Chart(document.getElementById('accuracyChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(patterns.correction_by_category),
+                    datasets: [{
+                        data: Object.values(patterns.correction_by_category),
+                        backgroundColor: ['#ef4444', '#f97316', '#22c55e', '#a855f7']
+                    }]
+                }
+            });
+        }
+
+        function renderRecommendations(adjustments) {
+            if (adjustments.length === 0) {
+                document.getElementById('recommendations').innerHTML = `
+                    <p class="text-gray-500">No recommendations yet. More feedback data needed.</p>
+                `;
+                return;
+            }
+
+            const priorityColors = {
+                'critical': 'bg-red-100 border-red-300 text-red-800',
+                'high': 'bg-orange-100 border-orange-300 text-orange-800',
+                'medium': 'bg-yellow-100 border-yellow-300 text-yellow-800'
+            };
+
+            document.getElementById('recommendations').innerHTML = adjustments.map(adj => `
+                <div class="border-l-4 ${priorityColors[adj.priority]} p-4 mb-3 rounded">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-semibold">${adj.type.replace(/_/g, ' ').toUpperCase()}</span>
+                        <span class="text-xs px-2 py-1 bg-white rounded">${adj.priority}</span>
+                    </div>
+                    <p class="text-sm">${adj.recommendation}</p>
+                    ${adj.frequency ? `<p class="text-xs mt-2">Frequency: ${adj.frequency} occurrences</p>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderProblematicCategories(categories) {
+            if (categories.length === 0) {
+                document.getElementById('problematicCategories').innerHTML = `
+                    <p class="text-green-600">✓ All categories performing well!</p>
+                `;
+                return;
+            }
+
+            document.getElementById('problematicCategories').innerHTML = categories.map(cat => `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-semibold text-red-900">${cat.category}</h3>
+                            <p class="text-sm text-red-700">Error Rate: ${(cat.error_rate * 100).toFixed(1)}%</p>
+                            <p class="text-xs text-gray-600">${cat.corrections} corrections out of ${cat.total} classifications</p>
+                        </div>
+                        <div class="text-4xl">⚠️</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        loadAnalytics();
+    </script>
+</body>
+</html>

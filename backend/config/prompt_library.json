@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "categories": {
+    "highly_sensitive": {
+      "name": "Highly Sensitive",
+      "triggers": ["SSN", "credit card", "account number", "proprietary schematic", "defense design"],
+      "keywords": ["XXX-XX-XXXX", "classified", "top secret", "confidential design"]
+    },
+    "confidential": {
+      "name": "Confidential",
+      "triggers": ["internal memo", "business document", "customer details", "operational content"],
+      "keywords": ["internal only", "not for distribution", "company confidential"]
+    },
+    "public": {
+      "name": "Public",
+      "triggers": ["marketing", "brochure", "public website", "press release"],
+      "keywords": ["for public release", "marketing material"]
+    },
+    "unsafe": {
+      "name": "Unsafe",
+      "triggers": ["child safety", "hate speech", "violent content", "criminal activity"],
+      "keywords": ["explicit", "violent", "illegal"]
+    }
+  }
+}

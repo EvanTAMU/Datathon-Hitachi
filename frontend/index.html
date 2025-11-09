@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Classifier - Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .evidence-card {
+            border-left: 4px solid #3b82f6;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        .nav-link.active {
+            background-color: rgba(59, 130, 246, 0.2);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation Header -->
+    <nav class="bg-white shadow-lg mb-6">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-4">
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl">🔒</span>
+                    <span class="text-xl font-bold text-gray-800">Document Classifier</span>
+                </div>
+                <div class="flex space-x-1">
+                    <a href="index.html" class="nav-link active px-4 py-2 rounded-lg text-gray-700">📤 Upload</a>
+                    <a href="review.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">🔍 Review Queue</a>
+                    <a href="audit.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">📋 Audit Trail</a>
+                    <a href="insights.html" class="nav-link px-4 py-2 rounded-lg text-gray-700">🧠 Insights</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header with Privacy Notice -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">Document Classification</h1>
+                    <p class="text-gray-600">AI-powered document classification for compliance and security</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs px-3 py-1 bg-green-100 text-green-800 rounded-full">🔒 Secure & Encrypted</span>
+                    <p class="text-xs text-gray-500 mt-1">90-day retention policy</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Upload Documents</h2>
+            
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4 hover:border-blue-400 transition">
+                <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <p class="text-gray-600 mb-4">Upload PDF, PNG, or JPG files</p>
+                <input type="file" id="fileInput" multiple accept=".pdf,.png,.jpg,.jpeg" class="hidden"/>
+                <label for="fileInput" class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition">
+                    Select Files
+                </label>
+            </div>
+
+            <div id="fileList" class="mb-4"></div>
+
+            <div class="flex gap-4">
+                <button id="classifyBtn" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    Classify Documents
+                </button>
+                <button id="clearBtn" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+                    Clear
+                </button>
+            </div>
+
+            <div id="progressSection" class="hidden mt-4">
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <p id="progressText" class="text-center text-blue-800 font-semibold mb-3">Processing...</p>
+                    <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
+                        <div id="progressBar" class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div class="loader"></div>
+                </div>
+            </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Classification Results</h2>
+                <div id="resultsContainer"></div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div id="statsSection" class="hidden bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Statistics</h2>
+            <div id="statsContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+        </div>
+
+        <!-- Enhanced Dashboard -->
+        <div id="dashboardSection" class="hidden bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Analytics Dashboard</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-semibold mb-3 text-center">Classification Distribution</h3>
+                    <canvas id="classificationChart"></canvas>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-semibold mb-3 text-center">Confidence Levels</h3>
+                    <canvas id="confidenceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Documents -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">📁 Recent Documents</h2>
+                <button onclick="cleanupExpiredFiles()" class="text-sm px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">
+                    🗑️ Cleanup Expired
+                </button>
+            </div>
+            <div id="recentDocs" class="space-y-2">
+                <p class="text-center text-gray-500 py-4">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let selectedFiles = [];
+        let chartInstances = {};
+        let activePollInterval = null; // Track active polling interval
+
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const classifyBtn = document.getElementById('classifyBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const progressSection = document.getElementById('progressSection');
+        const progressText = document.getElementById('progressText');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const statsSection = document.getElementById('statsSection');
+        const statsContainer = document.getElementById('statsContainer');
+
+        fileInput.addEventListener('change', (e) => {
+            selectedFiles = Array.from(e.target.files);
+            displayFileList();
+            classifyBtn.disabled = selectedFiles.length === 0;
+        });
+
+        function displayFileList() {
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '';
+                return;
+            }
+
+            fileList.innerHTML = `
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold mb-2">Selected Files (${selectedFiles.length}):</h3>
+                    <ul class="space-y-1">
+                        ${selectedFiles.map(file => `
+                            <li class="flex items-center text-sm text-gray-700">
+                                <svg class="h-4 w-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                ${file.name} (${formatFileSize(file.size)})
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        classifyBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            
+            // Clear any existing polling interval
+            if (activePollInterval) {
+                clearInterval(activePollInterval);
+                activePollInterval = null;
+            }
+            
+            progressSection.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+            statsSection.classList.add('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            classifyBtn.disabled = true;
+            
+            if (selectedFiles.length === 1) {
+                await classifySingleFile(selectedFiles[0]);
+                progressSection.classList.add('hidden'); // Only hide for single file
+            } else {
+                await classifyBatchFiles(selectedFiles);
+                // DON'T hide progressSection here - let pollBatchStatus handle it
+            }
+            
+            classifyBtn.disabled = false;
+            
+            // Reload recent docs after classification
+            setTimeout(() => loadRecentDocs(), 1000);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            // Clear any active polling
+            if (activePollInterval) {
+                clearInterval(activePollInterval);
+                activePollInterval = null;
+            }
+
+            selectedFiles = [];
+            fileInput.value = '';
+            fileList.innerHTML = '';
+            resultsSection.classList.add('hidden');
+            statsSection.classList.add('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            classifyBtn.disabled = true;
+        });
+
+        async function classifySingleFile(file) {
+            progressText.textContent = `Classifying ${file.name}...`;
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/classify/single`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                displayResults([{ filename: file.name, result }]);
+            } catch (error) {
+                console.error('Classification error:', error);
+                alert(`Error classifying document: ${error.message}`);
+            }
+        }
+
+        async function classifyBatchFiles(files) {
+            progressText.textContent = 'Starting batch classification...';
+            const formData = new FormData();
+            files.forEach(file => formData.append('files', file));
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/classify/batch`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const { job_id } = await response.json();
+                console.log(`Started batch job: ${job_id}`);
+                await pollBatchStatus(job_id);
+            } catch (error) {
+                console.error('Batch classification error:', error);
+                alert(`Error starting batch classification: ${error.message}`);
+            }
+        }
+
+        async function pollBatchStatus(jobId) {
+            let pollAttempts = 0;
+            const maxPollAttempts = 150; // 5 minutes max (150 * 2s = 300s)
+            
+            // Clear any existing interval first
+            if (activePollInterval) {
+                clearInterval(activePollInterval);
+            }
+            
+            activePollInterval = setInterval(async () => {
+                pollAttempts++;
+                
+                // Safety check: stop after max attempts
+                if (pollAttempts > maxPollAttempts) {
+                    console.error('Max poll attempts reached');
+                    clearInterval(activePollInterval);
+                    activePollInterval = null;
+                    alert('Classification is taking longer than expected. Please check the audit trail.');
+                    progressSection.classList.add('hidden');
+                    return;
+                }
+                
+                try {
+                    console.log(`Polling batch status (attempt ${pollAttempts}): ${jobId}`);
+                    
+                    const response = await fetch(`${API_BASE_URL}/api/batch/${jobId}/status`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Status check failed: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log(`Batch status:`, data);
+                    
+                    // Update progress text with count
+                    const completed = data.completed || 0;
+                    const total = data.total || 0;
+                    progressText.textContent = `Processing: ${completed}/${total} files`;
+                    
+                    // Update progress bar
+                    const progressBar = document.getElementById('progressBar');
+                    if (progressBar && total > 0) {
+                        const percentage = (completed / total) * 100;
+                        progressBar.style.width = `${percentage}%`;
+                    }
+                    
+                    // Check if completed
+                    if (data.status === 'completed') {
+                        console.log('Batch processing completed');
+                        clearInterval(activePollInterval);
+                        activePollInterval = null;
+                        
+                        // Show completion message
+                        progressText.textContent = `✓ Completed: ${completed}/${total} files`;
+                        if (progressBar) {
+                            progressBar.style.width = '100%';
+                        }
+                        
+                        // Wait a moment to show completion, then hide and display results
+                        setTimeout(() => {
+                            progressSection.classList.add('hidden');
+                            displayResults(data.results);
+                        }, 1000);
+                        
+                        return;
+                    }
+                    
+                    // Check if there was an error status
+                    if (data.status === 'error' || data.status === 'failed') {
+                        console.error('Batch processing failed');
+                        clearInterval(activePollInterval);
+                        activePollInterval = null;
+                        alert('Batch processing encountered an error. Check console for details.');
+                        progressSection.classList.add('hidden');
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                    clearInterval(activePollInterval);
+                    activePollInterval = null;
+                    alert('Error checking batch status. The process may still be running in the background.');
+                    progressSection.classList.add('hidden');
+                }
+            }, 2000); // Poll every 2 seconds
+        }
+        function displayResults(results) {
+            console.log('Displaying results:', results.length);
+            resultsSection.classList.remove('hidden');
+            
+            resultsContainer.innerHTML = results.map(item => {
+                if (item.error) return createErrorCard(item);
+                return createResultCard(item);
+            }).join('');
+
+            updateStatistics(results);
+            createCharts(results);
+        }
+
+        function createResultCard(item) {
+            const result = item.result;
+            const categoryColors = {
+                'Highly Sensitive': 'bg-red-100 text-red-800 border-red-300',
+                'Confidential': 'bg-orange-100 text-orange-800 border-orange-300',
+                'Public': 'bg-green-100 text-green-800 border-green-300',
+                'Unsafe': 'bg-purple-100 text-purple-800 border-purple-300'
+            };
+
+            const categoryIcons = {
+                'Highly Sensitive': '🔴',
+                'Confidential': '🟠',
+                'Public': '🟢',
+                'Unsafe': '🟣'
+            };
+
+            const colorClass = categoryColors[result.classification] || 'bg-gray-100 text-gray-800';
+            const icon = categoryIcons[result.classification] || '📄';
+            const isSafe = result.safety_assessment?.child_safe !== false;
+            const hasViolations = result.safety_assessment?.violations?.length > 0;
+
+            return `
+                <div class="border rounded-lg p-6 mb-4 bg-gray-50">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">${item.filename}</h3>
+                            <p class="text-sm text-gray-600">
+                                ${result.pre_check?.total_pages || 0} pages • ${result.pre_check?.total_images || 0} images
+                                ${result.file_id ? `• ID: ${result.file_id}` : ''}
+                            </p>
+                        </div>
+                        <div class="flex items-center px-4 py-2 rounded-lg border-2 ${colorClass}">
+                            <span class="text-xl mr-2">${icon}</span>
+                            <span class="font-semibold">${result.classification}</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-white p-3 rounded shadow-sm">
+                            <p class="text-xs text-gray-600 mb-1">Confidence</p>
+                            <p class="text-2xl font-bold text-blue-600">${(result.confidence * 100).toFixed(1)}%</p>
+                        </div>
+                        <div class="bg-white p-3 rounded shadow-sm">
+                            <p class="text-xs text-gray-600 mb-1">Content Safety</p>
+                            <p class="text-lg font-semibold">
+                                ${isSafe ? '<span class="text-green-600">✓ Safe</span>' : '<span class="text-red-600">⚠ Unsafe</span>'}
+                            </p>
+                        </div>
+                    </div>
+
+                    ${hasViolations ? `
+                        <div class="bg-red-50 border border-red-200 rounded p-3 mb-4">
+                            <h4 class="font-semibold text-red-800 mb-2">⚠️ Safety Violations:</h4>
+                            <ul class="text-sm space-y-2">
+                                ${result.safety_assessment.violations.map(v => `
+                                    <li class="text-red-700">
+                                        <strong>${v.type}</strong> (${v.severity}): ${v.description}
+                                        <br><span class="text-xs text-gray-600">Location: ${v.location}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+
+                    <div class="mb-4">
+                        <h4 class="font-semibold mb-2 text-gray-800">Reasoning:</h4>
+                        <p class="text-sm text-gray-700 bg-white p-3 rounded">
+                            ${result.reasoning || result.detailed_reasoning || result.primary_reason || 'No reasoning provided'}
+                        </p>
+                    </div>
+
+                    ${result.evidence && result.evidence.length > 0 ? `
+                        <div class="mb-4">
+                            <h4 class="font-semibold mb-2 text-gray-800">Evidence:</h4>
+                            <div class="space-y-2">
+                                ${result.evidence.map(ev => `
+                                    <div class="evidence-card bg-blue-50 p-3 rounded">
+                                        <p class="text-sm font-semibold text-blue-900">📍 Page ${ev.page} - ${ev.location}</p>
+                                        <p class="text-sm text-gray-700 mt-1">${ev.finding}</p>
+                                        <p class="text-xs text-gray-500 mt-1">Triggers: ${ev.category_trigger}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${result.pii_detected && Object.values(result.pii_detected).some(v => v === true) ? `
+                        <div class="bg-red-50 border border-red-200 rounded p-3 mb-4">
+                            <h4 class="font-semibold text-red-800 mb-2">🔒 PII Detected:</h4>
+                            <ul class="text-sm space-y-1">
+                                ${Object.entries(result.pii_detected)
+                                    .filter(([k, v]) => v === true)
+                                    .map(([key]) => `<li class="text-red-700">• ${key.replace('_', ' ').toUpperCase()}</li>`)
+                                    .join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+
+                    ${result.requires_human_review ? `
+                        <div class="bg-yellow-50 border border-yellow-300 rounded p-3 mb-4">
+                            <p class="text-sm font-semibold text-yellow-800">🔍 Human Review Required</p>
+                            <p class="text-xs text-yellow-700 mt-1">${result.review_reason || 'Manual review recommended'}</p>
+                        </div>
+                    ` : ''}
+
+                    ${result.file_id ? `
+                        <div class="flex gap-2 mt-4 pt-4 border-t">
+                            <button onclick="viewFile('${result.file_id}')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
+                                👁️ View File
+                            </button>
+                            <button onclick="downloadFile('${result.file_id}')" class="px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200">
+                                📥 Download
+                            </button>
+                            <button onclick="reclassifyFile('${result.file_id}')" class="px-3 py-1 bg-orange-100 text-orange-700 rounded text-sm hover:bg-orange-200">
+                                🔄 Re-classify
+                            </button>
+                            <button onclick="deleteFile('${result.file_id}')" class="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function createErrorCard(item) {
+            return `
+                <div class="border border-red-300 rounded-lg p-6 mb-4 bg-red-50">
+                    <h3 class="text-lg font-bold text-red-800 mb-2">${item.filename}</h3>
+                    <p class="text-sm text-red-600">❌ Error: ${item.error}</p>
+                </div>
+            `;
+        }
+
+        function updateStatistics(results) {
+            const stats = {
+                total: results.length,
+                'Highly Sensitive': 0,
+                'Confidential': 0,
+                'Public': 0,
+                'Unsafe': 0
+            };
+
+            results.forEach(item => {
+                if (item.error) return;
+                if (item.result?.classification) {
+                    stats[item.result.classification]++;
+                }
+            });
+
+            statsSection.classList.remove('hidden');
+            statsContainer.innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 mb-1">Total Documents</p>
+                    <p class="text-3xl font-bold text-blue-600">${stats.total}</p>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 mb-1">Highly Sensitive</p>
+                    <p class="text-3xl font-bold text-red-600">${stats['Highly Sensitive']}</p>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 mb-1">Confidential</p>
+                    <p class="text-3xl font-bold text-orange-600">${stats['Confidential']}</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 mb-1">Public</p>
+                    <p class="text-3xl font-bold text-green-600">${stats['Public']}</p>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <p class="text-xs text-gray-600 mb-1">Unsafe Content</p>
+                    <p class="text-3xl font-bold text-purple-600">${stats['Unsafe']}</p>
+                </div>
+            `;
+        }
+
+        function createCharts(results) {
+            const classificationData = {
+                'Highly Sensitive': 0,
+                'Confidential': 0,
+                'Public': 0,
+                'Unsafe': 0
+            };
+            
+            results.forEach(item => {
+                if (item.result?.classification && classificationData.hasOwnProperty(item.result.classification)) {
+                    classificationData[item.result.classification]++;
+                }
+            });
+
+            if (chartInstances.classification) chartInstances.classification.destroy();
+            if (chartInstances.confidence) chartInstances.confidence.destroy();
+
+            chartInstances.classification = new Chart(document.getElementById('classificationChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(classificationData),
+                    datasets: [{
+                        data: Object.values(classificationData),
+                        backgroundColor: ['#ef4444', '#f97316', '#22c55e', '#a855f7'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+            
+            const confidenceRanges = {'0-50%': 0, '50-70%': 0, '70-90%': 0, '90-100%': 0};
+            results.forEach(item => {
+                const conf = item.result?.confidence || 0;
+                if (conf < 0.5) confidenceRanges['0-50%']++;
+                else if (conf < 0.7) confidenceRanges['50-70%']++;
+                else if (conf < 0.9) confidenceRanges['70-90%']++;
+                else confidenceRanges['90-100%']++;
+            });
+            
+            chartInstances.confidence = new Chart(document.getElementById('confidenceChart'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(confidenceRanges),
+                    datasets: [{
+                        label: 'Documents',
+                        data: Object.values(confidenceRanges),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+            
+            document.getElementById('dashboardSection').classList.remove('hidden');
+        }
+
+        // Load recent documents
+        async function loadRecentDocs() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/audit-trail?limit=10`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data.length > 0) {
+                    renderRecentDocs(data.data);
+                } else {
+                    document.getElementById('recentDocs').innerHTML = `
+                        <p class="text-center text-gray-500 py-4">No documents yet. Upload to get started!</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading recent docs:', error);
+                document.getElementById('recentDocs').innerHTML = `
+                    <p class="text-center text-red-500 py-4">Error loading documents</p>
+                `;
+            }
+        }
+
+        function renderRecentDocs(docs) {
+            const container = document.getElementById('recentDocs');
+            container.innerHTML = docs.map(doc => {
+                const details = parseDetails(doc.details);
+                const fileId = details?.file_id;
+                const isSafe = details?.safety_assessment?.child_safe !== false;
+                
+                return `
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded hover:bg-gray-100 transition">
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-800">${doc.document_name}</p>
+                            <p class="text-xs text-gray-500">
+                                ${new Date(doc.timestamp).toLocaleString()} •
+                                <span class="px-2 py-0.5 rounded text-xs ${getCategoryClass(doc.classification)}">${doc.classification}</span> •
+                                ${isSafe ? '<span class="text-green-600">✓ Safe</span>' : '<span class="text-red-600">⚠ Unsafe</span>'}
+                            </p>
+                        </div>
+                        <div class="flex gap-2">
+                            ${fileId ? `
+                                <button onclick="viewFile('${fileId}')" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    👁️ View
+                                </button>
+                                <button onclick="reclassifyFile('${fileId}')" class="text-orange-600 hover:text-orange-800 text-sm font-medium">
+                                    🔄 Re-classify
+                                </button>
+                            ` : `
+                                <span class="text-xs text-gray-400">File not stored</span>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function parseDetails(detailsStr) {
+            try {
+                return typeof detailsStr === 'string' ? JSON.parse(detailsStr) : detailsStr;
+            } catch {
+                return null;
+            }
+        }
+
+        function getCategoryClass(category) {
+            const classes = {
+                'Highly Sensitive': 'bg-red-100 text-red-800',
+                'Confidential': 'bg-orange-100 text-orange-800',
+                'Public': 'bg-green-100 text-green-800',
+                'Unsafe': 'bg-purple-100 text-purple-800'
+            };
+            return classes[category] || 'bg-gray-100 text-gray-800';
+        }
+
+        // File management functions
+        async function viewFile(fileId) {
+            window.open(`${API_BASE_URL}/api/files/view/${fileId}`, '_blank');
+        }
+
+        async function downloadFile(fileId) {
+            window.location.href = `${API_BASE_URL}/api/files/view/${fileId}`;
+        }
+
+        async function reclassifyFile(fileId) {
+            if (!confirm('Re-classify this document? This will create a new classification record.')) return;
+
+            try {
+                progressSection.classList.remove('hidden');
+                progressText.textContent = 'Re-classifying document...';
+
+                const response = await fetch(`${API_BASE_URL}/api/files/reclassify/${fileId}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`✓ Re-classification complete!\nNew classification: ${result.classification}\nConfidence: ${(result.confidence * 100).toFixed(1)}%`);
+                    setTimeout(() => loadRecentDocs(), 500);
+                }
+            } catch (error) {
+                alert('Error re-classifying file');
+            } finally {
+                progressSection.classList.add('hidden');
+            }
+        }
+
+        async function deleteFile(fileId) {
+            if (!confirm('Permanently delete this file? This action cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/files/${fileId}?reason=user_request`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('✓ File securely deleted');
+                    setTimeout(() => loadRecentDocs(), 500);
+                }
+            } catch (error) {
+                alert('Error deleting file');
+            }
+        }
+
+        async function cleanupExpiredFiles() {
+            if (!confirm('Clean up all files past retention period?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/files/cleanup`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                alert(`✓ Cleanup complete!\n${data.deleted_count} files deleted`);
+                setTimeout(() => loadRecentDocs(), 500);
+            } catch (error) {
+                alert('Error running cleanup');
+            }
+        }
+
+        function closeFileModal() {
+            document.getElementById('fileDetailsModal').classList.add('hidden');
+        }
+
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/health`);
+                if (response.ok) {
+                    console.log('✓ API is healthy');
+                } else {
+                    console.warn('⚠ API health check failed');
+                }
+            } catch (error) {
+                console.error('❌ Cannot connect to API:', error);
+                alert('Warning: Cannot connect to backend API. Make sure the server is running on http://localhost:8000');
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (activePollInterval) {
+                clearInterval(activePollInterval);
+            }
+        });
+
+        // Initial load
+        checkAPIHealth();
+        loadRecentDocs();
+    </script>
+</body>
+</html>
