@@ -1,0 +1,12 @@
+services:
+  backend:
+    build: .
+    command: sh -c "cd backend && python api/main.py"
+    ports:
+      - "8000:8000"
+    
+  frontend:
+    build: .
+    command: sh -c "cd frontend && python3 -m http.server 3000"
+    ports:
+      - "3000:3000"
